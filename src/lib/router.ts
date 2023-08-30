@@ -24,38 +24,32 @@ export const router: IRouter = {
 
   startRouter(server) {
     server.addListener('request',
-      (socket: Socket, request: IParserdRequest) => {
+      async (socket: Socket, request: IParserdRequest) => {
 
         console.log('new request on:', request.path, request.method)
-        const callback = this.routes[request.method][request.path]
-        if (callback) {
-          try {
-            callback(request, _response(socket), socket)
-          } catch (error) {
-            console.error(error)
-            fs.readFile(path.resolve('./src/pages/500.html')).then(file => {
-              socket.write('HTTP/1.1 500\r\n')
-              socket.write('content-type: text/html\r\n')
-              socket.write(`content-length: ${file.length}\r\n`)
-              socket.write(`Connection: Closed\r\n\r\n`)
-              socket.write(file)
-            }).catch(err => console.error(err)).finally(() => {
-              socket.destroy()
-            })
+        const response = _response(socket)
+        try {
+          const callback = this.routes[request.method][request.path]
+          if (callback) {
+            callback(request, response)
+          }
+          else {
+            const file = await fs.readFile(path.resolve('./src/pages/404.html'))
+            response.addHeader('contetn-type', 'text/html')
+            response.bytes(file)
+            response.send(404)
           }
         }
-        else {
-          fs.readFile(path.resolve('./src/pages/404.html')).then(file => {
-            socket.write('HTTP/1.1 404\r\n')
-            socket.write('content-type: text/html\r\n')
-            socket.write(`content-length: ${file.length}\r\n`)
-            socket.write(`Connection: Closed\r\n\r\n`)
-            socket.write(file)
-          }).catch(err => console.error(err)).finally(() => {
-            socket.destroy()
-          })
-
+        catch (error) {
+          console.error(error)
+          const file = await fs.readFile(path.resolve('./src/pages/500.html'))
+          response.addHeader('contetn-type', 'text/html')
+          response.bytes(file)
+          response.send(500)
+        } finally {
+          socket.destroy()
         }
+
       })
     return server
   }

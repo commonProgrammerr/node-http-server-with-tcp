@@ -7,6 +7,11 @@ export function _response(socket: Socket): IResponse {
     socket,
     addHeader(name: string, value: any) { this.headers[name] = value },
 
+    bytes(data: Buffer) {
+      this.buffer = data
+      this.addHeader('content-length', this.buffer.length)
+    },
+
     text(data: string) {
       this.body = data
       this.addHeader('content-type', 'text')
@@ -31,7 +36,8 @@ export function _response(socket: Socket): IResponse {
       })
       this.socket.write('\r\n')
 
-      this.body && this.socket.write(this.body)
+      const to_write = this.body || this.buffer
+      to_write && this.socket.write(to_write)
 
       this.socket.end('\r\n')
     }

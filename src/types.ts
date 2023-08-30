@@ -1,4 +1,5 @@
 import { Server, Socket } from "node:net"
+import { type } from "node:os"
 
 export type Method = keyof Methods
 
@@ -29,6 +30,7 @@ export interface IParserdRequest {
 export interface IParsedResponse {
   headers: IHeaders
   body?: string
+  buffer?: Buffer
 }
 
 export interface IResponse extends IParsedResponse {
@@ -36,13 +38,11 @@ export interface IResponse extends IParsedResponse {
   addHeader(name: string, value: any): void
   json(data: any): void
   text(data: string): void
+  bytes(data: Buffer): void
   send(status?: number): void
 }
 
-export interface RouterCallback {
-  (request: IParserdRequest, response: IResponse, socket: Socket): void
-  (request: IParserdRequest, response: IResponse): void
-}
+export type RouterCallback = ((request: IParserdRequest, response: IResponse) => void)
 
 
 export interface IRoutes {
