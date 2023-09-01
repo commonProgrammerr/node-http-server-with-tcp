@@ -5,21 +5,29 @@
   "main": "index.js",
   "scripts": {
     "dev": "npx nodemon",
-    "build": "rimraf ./build && tsc",
-    "start": "npm run build && node build/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev:client": "npx nodemon -w src/client.ts src/lib --exec \"npx ts-node ./src/client.ts\" ",
+    "client": "npx  ts-node ./src/client.ts",
+    "build": "rimraf ./build && tsc src/server.ts --outDir build && webpack",
+    "start:server": "npm run build && node build/server.bundle.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "parse-request": "^6.0.1"
+    "colors": "^1.4.0"
   },
   "devDependencies": {
+    "@types/colors": "^1.2.1",
     "@types/node": "^20.5.7",
+    "concurrently": "^8.2.1",
     "nodemon": "^3.0.1",
     "rimraf": "^5.0.1",
+    "ts-loader": "^9.4.4",
     "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "typescript-bundle": "^1.0.18",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "webpack-node-externals": "^3.0.0"
   }
 }

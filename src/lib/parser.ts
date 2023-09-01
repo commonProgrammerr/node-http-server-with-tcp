@@ -1,4 +1,4 @@
-import { IParserdRequest, IHeaders } from '../types'
+import { IParserdRequest, IHeaders, IParsedResponse } from '../types'
 
 export function parseRequest(payload: string): IParserdRequest | undefined {
 
@@ -12,11 +12,10 @@ export function parseRequest(payload: string): IParserdRequest | undefined {
     const method = request_line[0]
     const url = request_line[1].split('?')
     const path = url[0]
-    //const raw_params = request_line[1].split('?')[1].split('&')
+
     const raw_params = url[1] ? new URLSearchParams(url[1]) : undefined
     let headers: IHeaders = {}
     let params: IHeaders = {}
-
     raw_header.forEach(line => {
 
       let header = line.split(':');
@@ -39,6 +38,42 @@ export function parseRequest(payload: string): IParserdRequest | undefined {
       path,
       headers,
       params,
+      body
+    }
+  }
+}
+export function parseResponse(payload: string): Omit<IParsedResponse, 'socket'> | undefined {
+
+  if (payload.includes('\n\n') || payload.includes('\r\n\r\n')) {
+
+    const raw_response = payload.includes('\n\n') ? payload.split('\n\n') : payload.split('\r\n\r\n');
+    const raw_header = raw_response[0].includes('\r\n') ? raw_response[0].split('\r\n') : raw_response[0].split('\n')
+    const raw_body = raw_response[1]
+
+    const request_line = raw_header.shift()!.split(' ')
+    const status = Number(request_line[1]) || undefined
+
+    let headers: IHeaders = {}
+
+    raw_header.forEach(line => {
+
+      let header = line.split(':');
+      let key = header[0].toLowerCase()
+      let value: any = header.slice(1).join(':').trimStart();
+      value = Number(value) || value
+
+      headers[key] = value
+    })
+
+    let body: any = undefined
+
+    if (Number.isInteger(headers['content-length'])) {
+      body = raw_body.substring(0, headers['content-length'] as number)
+    }
+
+    return {
+      status,
+      headers,
       body
     }
   }

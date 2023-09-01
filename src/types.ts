@@ -28,6 +28,7 @@ export interface IParserdRequest {
 }
 
 export interface IParsedResponse {
+  status?: number
   headers: IHeaders
   body?: string
   buffer?: Buffer
@@ -42,7 +43,7 @@ export interface IResponse extends IParsedResponse {
   send(status?: number): void
 }
 
-export type RouterCallback = ((request: IParserdRequest, response: IResponse) => void)
+export type RouterCallback = ((request: IParserdRequest, response: IResponse) => any)
 
 
 export interface IRoutes {

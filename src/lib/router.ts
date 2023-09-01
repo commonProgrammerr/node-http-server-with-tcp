@@ -1,8 +1,6 @@
 import { Socket } from "node:net";
 import { Methods, IParserdRequest, IRouter } from '../types'
 import { _response } from "./response";
-import fs from "node:fs/promises";
-import path from "node:path";
 
 
 export const router: IRouter = {
@@ -28,28 +26,25 @@ export const router: IRouter = {
 
         console.log('new request on:', request.path, request.method)
         const response = _response(socket)
-        try {
-          const callback = this.routes[request.method][request.path]
-          if (callback) {
-            callback(request, response)
-          }
-          else {
-            const file = await fs.readFile(path.resolve('./src/pages/404.html'))
-            response.addHeader('contetn-type', 'text/html')
-            response.bytes(file)
-            response.send(404)
-          }
-        }
-        catch (error) {
-          console.error(error)
-          const file = await fs.readFile(path.resolve('./src/pages/500.html'))
-          response.addHeader('contetn-type', 'text/html')
-          response.bytes(file)
-          response.send(500)
-        } finally {
-          socket.destroy()
-        }
 
+        if (!(this.routes))
+          this.routes = {}
+        const callback = this.routes[request.method][request.path]
+
+        if (callback) {
+          const p = callback(request, response)
+          if (p instanceof Promise)
+            await p;
+        }
+        else {
+          response.json({
+            err_message: 'Invalid path!',
+            avaliable_paths: Object.keys(this.routes).map(key => {
+              return Object.keys(this.routes[key]).map(path => `${key} - ${path}`)
+            }).flat()
+          })
+          response.send(404)
+        }
       })
     return server
   }

@@ -20,8 +20,10 @@ export function _response(socket: Socket): IResponse {
 
     json(data: any) {
       this.body = JSON.stringify(data)
-      this.addHeader('content-type', 'application/json')
-      this.addHeader('content-length', this.body.length)
+      if (this.body) {
+        this.addHeader('content-type', 'application/json')
+        this.addHeader('content-length', this.body.length)
+      }
     },
 
     send(status = 200) {
