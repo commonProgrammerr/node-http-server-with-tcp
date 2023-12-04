@@ -1,5 +1,5 @@
+import { PathLike } from "node:fs"
 import { Server, Socket } from "node:net"
-import { type } from "node:os"
 
 export type Method = keyof Methods
 
@@ -44,6 +44,7 @@ export interface IResponse extends IParsedResponse {
 }
 
 export type RouterCallback = ((request: IParserdRequest, response: IResponse) => any)
+export type MidwareCallback = ((request: IParserdRequest, response: IResponse, next?: any) => Promise<any>)
 
 
 export interface IRoutes {
@@ -55,7 +56,12 @@ export interface IRouter {
   routes: {
     [key: string]: IRoutes
   }
+  staticsBasePath?: string
   server?: Server
+  _404: RouterCallback;
+  _400: RouterCallback;
+  _500: RouterCallback;
+
   route(method: Methods, path: string, cb: RouterCallback): void
   all(path: string, cb: RouterCallback): void
   get(path: string, cb: RouterCallback): void
@@ -66,6 +72,9 @@ export interface IRouter {
   options(path: string, cb: RouterCallback): void
   head(path: string, cb: RouterCallback): void
 
+  requestHandle(request: IParserdRequest, response: IResponse): void
+  staticHandle(request: IParserdRequest, response: IResponse): Promise<void>
 
+  static(path: string): void
   startRouter(server: Server): Server
 }

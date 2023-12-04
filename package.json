@@ -14,10 +14,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "colors": "^1.4.0"
+    "colors": "^1.4.0",
+    "mime-types": "^2.1.35"
   },
   "devDependencies": {
     "@types/colors": "^1.2.1",
+    "@types/mime-types": "^2.1.4",
     "@types/node": "^20.5.7",
     "concurrently": "^8.2.1",
     "nodemon": "^3.0.1",
