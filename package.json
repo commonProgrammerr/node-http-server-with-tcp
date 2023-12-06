@@ -7,7 +7,7 @@
     "dev": "npx nodemon",
     "dev:client": "npx nodemon -w src/client.ts src/lib --exec \"npx ts-node ./src/client.ts\" ",
     "client": "npx  ts-node ./src/client.ts",
-    "build": "rimraf ./build && tsc src/server.ts --outDir build && webpack",
+    "build": "rimraf ./build && tsc src/server.ts --outDir build && webpack && cp -r src/assets build/assets",
     "start:server": "npm run build && node build/server.bundle.js"
   },
   "keywords": [],

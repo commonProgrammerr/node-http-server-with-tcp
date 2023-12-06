@@ -1,10 +1,12 @@
 import * as net from 'net';
 import { router } from './lib/router'
 import { IParserdRequest } from './types';
-import path from 'node:path';
+import * as path from 'path';
+import { existsSync, lstatSync, readFileSync, readdirSync, rmSync, rmdirSync, writeFileSync } from 'fs';
 
 const port = Number(process.env.PORT) || 8080;
 const host = process.env.ADDRESS || '127.0.0.1';
+const root_dir = process.env.ROOT || __dirname
 
 const server = net.createServer();
 
@@ -13,91 +15,81 @@ server.listen(port, host, () => {
 });
 
 router.startRouter(server);
-router.static(path.resolve(__dirname, '..'))
 
-function validateReques(req: IParserdRequest) {
-  try {
-    if (req.headers?.['content-type'] !== 'application/json')
-      return { status: 400, err_message: 'Invalid content-type' }
-    else if (!JSON.parse(req.body ?? ""))
-      return { status: 400, err_message: 'Invalid request body' }
-    else if (req.headers['content-length'] !== req.body?.length)
-      return { status: 400, err_message: 'Invalid body length' }
 
-  } catch (err) {
-    return { status: 400, err_message: 'Invalid JSON format' }
+router.static(path.resolve(root_dir))
+
+router.get('/files', (req, res) => {
+  if (!req.params.path) {
+    const root = path.resolve(root_dir)
+    res.json(readdirSync(root).map(child => {
+      const _ = path.join(root, child)
+      const stat = lstatSync(_)
+      return {
+        type: stat.isDirectory() ? 'folder' : 'file',
+        path: child
+      }
+    }))
+    return res.send(200)
   }
-}
 
-// router.post('/', (req, res) => {
-//   const isInvalid = validateReques(req)
-//   if (isInvalid) {
-//     res.json(isInvalid)
-//     res.send(isInvalid.status)
-//   } else {
-//     cache.push(JSON.parse(req.body ?? ""))
-//     res.send(201)
-//   }
-// })
+  const dest_path = path.resolve(root_dir, String(req.params.path))
 
-// router.put('/', (req, res) => {
+  if (!existsSync(path.resolve(dest_path)))
+    return router._404(req, res)
 
-//   const isInvalid = validateReques(req)
-//   if (isInvalid) {
-//     res.json(isInvalid)
-//     res.send(isInvalid.status)
-//   } else {
-//     const { id } = req.params || {}
-//     if (cache[id]) {
-//       cache[id] = JSON.parse(req.body ?? "")
-//       res.send(200)
-//     } else {
-//       res.json({ err_message: "Item not found!" })
-//       res.send(404)
-//     }
-//     return
+  const stat = lstatSync(dest_path)
 
-//   }
-//   res.send(400)
-// })
+  if (stat.isDirectory()) {
+    res.json(readdirSync(dest_path).map(child => {
+      const _ = path.join(dest_path, child)
+      const stat = lstatSync(_)
+      return {
+        type: stat.isDirectory() ? 'folder' : 'file',
+        path: path.join(String(req.params.path), child)
+      }
+    }))
+    return res.send(200)
+  } else {
+    router._400(req, res)
+  }
+})
 
-// router.delete('/', (req, res) => {
-//   try {
-//     const { id } = req.params ?? {}
+router.post('/files', (req, res) => {
 
-//     if (cache[id]) {
-//       delete cache[id]
-//       res.send(200)
-//     }
-//     else {
-//       res.json({ err_message: "Item not found!" })
-//       res.send(404)
-//     }
+  if (!req.params.path)
+    return router._400(req, res)
 
-//   } catch (err) {
-//     console.error(err)
-//     res.json({ err_message: 'Internal erro' })
-//     res.send(500)
-//   }
-// })
+  const dest_path = path.resolve(root_dir, String(req.params.path))
 
-// router.get('/', (req, res) => {
-//   try {
-//     const { id } = req.params ?? {}
+  if (existsSync(dest_path))
+    return router._500(req, res)
 
-//     if (!id)
-//       res.json(cache)
-//     else if (cache[id])
-//       res.json(cache[id])
+  writeFileSync(dest_path, req.body)
+  const sucess = existsSync(dest_path)
+  res.json({ sucess })
+  res.send(sucess ? 201 : 500)
 
-//     else {
-//       res.json({ err_message: "Item not found!" })
-//       return res.send(404)
-//     }
-//     res.send(200)
-//   } catch (err) {
-//     console.error(err)
-//     res.json({ err_message: (err as Error).message })
-//     res.send(500)
-//   }
-// })
+})
+
+router.delete('/files', (req, res) => {
+
+  if (!req.params.path)
+    return router._400(req, res)
+
+  const dest_path = path.resolve(root_dir, String(req.params.path))
+
+  if (!existsSync(dest_path))
+    return router._404(req, res)
+
+  const stat = lstatSync(dest_path)
+  if (stat.isDirectory())
+    rmdirSync(dest_path)
+  else
+    rmSync(dest_path)
+
+  const sucess = !existsSync(dest_path)
+  res.json({ sucess })
+  res.send(sucess ? 204 : 500)
+
+})
