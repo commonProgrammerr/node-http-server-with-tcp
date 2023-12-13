@@ -1,8 +1,7 @@
 import * as net from 'net';
 import { router } from './lib/router'
-import { IParserdRequest } from './types';
 import * as path from 'path';
-import { existsSync, lstatSync, readFileSync, readdirSync, rmSync, rmdirSync, writeFileSync } from 'fs';
+import { createWriteStream, existsSync, lstatSync, mkdirSync, readdirSync, rmSync, rmdirSync, writeFileSync } from 'fs';
 
 const port = Number(process.env.PORT) || 8080;
 const host = process.env.ADDRESS || '127.0.0.1';
@@ -55,21 +54,54 @@ router.get('/files', (req, res) => {
   }
 })
 
-router.post('/files', (req, res) => {
+router.post('/folder', (req, res) => {
 
   if (!req.params.path)
     return router._400(req, res)
 
-  const dest_path = path.resolve(root_dir, String(req.params.path))
+  const dest_path = path.join(root_dir, String(req.params.path))
 
   if (existsSync(dest_path))
     return router._500(req, res)
 
-  writeFileSync(dest_path, req.body)
+  mkdirSync(dest_path)
   const sucess = existsSync(dest_path)
   res.json({ sucess })
   res.send(sucess ? 201 : 500)
+})
 
+// [0x0D, 0x0A, 0x30, 0x0D, 0x0A, 0x0D, 0x0A]
+// const end_chunk = Buffer.from('DQowDQoNCg==', 'base64')
+
+router.all('/upload', async (req, res) => {
+  try {
+    if (!req.params.path)
+      return router._400(req, res)
+    const dest_path = path.join(root_dir, String(req.params.path))
+
+    if (existsSync(dest_path))
+      return router._500(req, res)
+
+    const file = createWriteStream(dest_path)
+    req.body && file.write(req.body.buffer)
+    // req.socket.pipe(file)
+    if (req.body.totalWrite === req.headers['content-length'])
+      res.send(201)
+    else
+      req.socket.addListener('chunk', (data: Buffer) => {
+        // if (data.toString().endsWith(end_chunk.toString())) {
+        if (data.byteLength < 64 * 1024) {
+          file.write(data)
+          res.send(201)
+        }
+        else
+          file.write(data)
+      })
+
+  } catch (err) {
+    console.error(err)
+    router._500(req, res)
+  }
 })
 
 router.delete('/files', (req, res) => {

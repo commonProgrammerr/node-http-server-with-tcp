@@ -1,9 +1,9 @@
-import { Methods, IRouter } from '../types'
+import { Methods, IRouter, IRequest, IParserdRequest, IResponse } from '../types'
 import { _response } from "./response";
 import { parseRequest } from './parser';
-import { existsSync, lstatSync, readFileSync, readdirSync } from 'fs'
+import { existsSync, lstatSync, readFileSync, readdirSync, writeFile, writeFileSync } from 'fs'
 import * as path from "path";
-import * as mime from 'mime-types'
+import { Socket } from 'net';
 
 function getDirHtml(base: string, childs: string[]) {
   return `<!DOCTYPE html><html><head>
@@ -15,29 +15,29 @@ function getDirHtml(base: string, childs: string[]) {
 </ul></div></body></html>`
 }
 
+function _500(req: IRequest, res: IResponse) {
+  res.file(path.resolve('src/static/500.html'))
+  res.send(500)
+}
+
+function _404(request: IRequest, response: IResponse) {
+  response.file(path.resolve('src/static/404.html'))
+  response.send(404)
+}
+
+function _400(req: IRequest, res: IResponse) {
+  res.file(path.resolve('src/static/400.html'))
+  res.send(400)
+}
+
 export const router: IRouter = {
   routes: {},
   staticsBasePath: "",
   server: undefined,
 
-  _500(req, res) {
-    const buffer = readFileSync(path.resolve('src/static/500.html'))
-    res.addHeader('content-type', 'text/html')
-    res.bytes(buffer)
-    res.send(500)
-  },
-  _404(request, response) {
-    const buffer = readFileSync(path.resolve('src/static/404.html'))
-    response.text(buffer.toString().replace('$PATH', request.path))
-    response.addHeader('content-type', 'text/html')
-    response.send(404)
-  },
-  _400(req, res) {
-    const buffer = readFileSync(path.resolve('src/static/400.html'))
-    res.addHeader('content-type', 'text/html')
-    res.bytes(buffer)
-    res.send(400)
-  },
+  _500,
+  _404,
+  _400,
 
   static(_path) {
     const staticsBasePath = path.resolve(_path)
@@ -45,7 +45,8 @@ export const router: IRouter = {
     console.log('Static server on ', staticsBasePath)
   },
 
-  async requestHandle(request, response) {
+  async requestHandle(request) {
+    const response = _response(request.socket)
     try {
       console.log(`new ${request.method} request on ${request.path}`)
 
@@ -61,11 +62,11 @@ export const router: IRouter = {
         await this.staticHandle(request, response)
       } else {
         console.log('path not found')
-        this._404(request, response);
+        _404(request, response);
       }
     } catch (error) {
       console.error(error)
-      this._500(request, response)
+      _500(request, response)
     }
 
   },
@@ -75,32 +76,28 @@ export const router: IRouter = {
     try {
       if (!existsSync(filePath)) {
         console.log('no avaiable file', filePath)
-        return this._404(request, response);
+        return _404(request, response);
       }
 
       console.log('search path', filePath)
       if (request.method == Methods.get) {
         if (lstatSync(filePath).isDirectory()) {
-          response.addHeader('content-type', 'text/html')
           const index_path = path.join(filePath, 'index.html')
+          response.setHeader('content-type', 'text/html')
           if (!existsSync(index_path))
             response.text(getDirHtml(request.path, readdirSync(filePath)))
           else {
-            const file = readFileSync(index_path)
-            response.bytes(file)
+            response.file(index_path)
           }
-        } else {
-          const type = mime.lookup(filePath)
-          response.addHeader('content-type', type || 'text/plain')
-          const file = readFileSync(filePath)
-          response.bytes(file)
-        }
+        } else
+          response.file(filePath)
+
         response.send(200)
       } else
-        this._400(request, response)
+        _400(request, response)
     } catch (e) {
       console.error(e)
-      this._500(request, response)
+      _500(request, response)
     }
   },
 
@@ -134,26 +131,37 @@ export const router: IRouter = {
 
   startRouter(server) {
     this.server = server
-    server.addListener('request', (socket, request) => {
-      this.requestHandle(request, _response(socket))
-    })
+    server.on('connection', (socket: { request: IParserdRequest } & Socket) => {
 
-    server.on('connection', (socket) => {
       console.log(`New client Connected at ${socket.remoteAddress}:${socket.remotePort}`)
 
       socket.on('data', async (data) => {
+
         try {
-          const request = parseRequest(data.toString())
-          if (request)
-            server.emit('request', socket, request)
-          else
+          const request = parseRequest(data)
+          if (request) {
+            this.requestHandle({ ...request, socket })
+            socket.request = request
+          }
+          else if (socket.request) {
+            if (
+              socket.request.headers['poli-file'] === 'chunked'
+
+              // socket.request.headers['content-type'] === 'application/octet-stream'
+            ) {
+              socket.emit('chunk', data)
+            }
+            else
+              socket.request.body.add(data)
+          }
+          else {
+            console.error(request)
             _response(socket).send(400)
+          }
 
         } catch (error) {
           console.error(error)
           _response(socket).send(500)
-        } finally {
-          socket.destroy()
         }
       });
     })

@@ -1,14 +1,19 @@
-import { IParserdRequest, IHeaders, IParsedResponse } from '../types'
+import { IParserdRequest, IHeaders, IParsedResponse, BodyBuffer } from '../types'
 
-export function parseRequest(payload: string): IParserdRequest | undefined {
+const top_header_rgx = /(CONNEC|DELETE|GET|HEAD|OPTIONS|POST|PUT|PATCH|ALL) ([\S]+) (HTTP\/1\.1)/i
 
-  if (payload.includes('\n\n') || payload.includes('\r\n\r\n')) {
+export function parseRequest(payload: Buffer): IParserdRequest | undefined {
 
-    const raw_request = payload.includes('\n\n') ? payload.split('\n\n') : payload.split('\r\n\r\n');
-    const raw_header = raw_request[0].includes('\r\n') ? raw_request[0].split('\r\n') : raw_request[0].split('\n')
-    const raw_body = raw_request[1]
+  const hasBody = payload.includes(Buffer.from('\r\n\r\n'))
 
-    const request_line = raw_header.shift()!.split(' ')
+  const body_break = hasBody && payload.indexOf(Buffer.from('\r\n\r\n'))
+  const raw_headers = hasBody ? payload.subarray(0, body_break).toString() : payload.toString();
+  const isValidRequest = top_header_rgx.test(raw_headers.split('\r\n')[0])
+
+  if (isValidRequest) {
+    const raw_body = body_break && payload.subarray(body_break + 4);
+    const [top_header, ...raw_header] = raw_headers.split('\r\n')
+    const request_line = top_header.split(' ')
     const method = request_line[0]
     const url = request_line[1].split('?')
     const path = url[0]
@@ -28,18 +33,29 @@ export function parseRequest(payload: string): IParserdRequest | undefined {
 
     raw_params?.forEach((value, key) => params[key] = value)
 
-    let body: any = undefined
-
-    if (Number.isInteger(headers['content-length'])) {
-      body = raw_body.substring(0, headers['content-length'] as number)
+    let body: BodyBuffer = undefined
+    if (hasBody) {
+      if (
+        headers['poli-file'] === 'chunked'
+        // ||
+        // headers['content-type'] === 'application/octet-stream'
+      ) {
+        body = new BodyBuffer(raw_body)
+      } else if (Number.isInteger(headers['content-length'])) {
+        body = new BodyBuffer(headers['content-length'] as number)
+        body.add(raw_body)
+      }
     }
+
     return {
       method,
       path,
       headers,
       params,
-      body
+      body,
     }
+  } else {
+    return undefined
   }
 }
 export function parseResponse(payload: string): Omit<IParsedResponse, 'socket'> | undefined {
