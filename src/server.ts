@@ -4,7 +4,7 @@ import * as path from 'path';
 import { createWriteStream, existsSync, lstatSync, mkdirSync, readdirSync, rmSync, rmdirSync, writeFileSync } from 'fs';
 
 const port = Number(process.env.PORT) || 8080;
-const host = process.env.ADDRESS || '127.0.0.1';
+const host = process.env.ADDRESS || '0.0.0.0';
 const root_dir = process.env.ROOT || __dirname
 
 const server = net.createServer();
