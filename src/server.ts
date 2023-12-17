@@ -5,7 +5,7 @@ import { createWriteStream, existsSync, lstatSync, mkdirSync, readdirSync, rmSyn
 
 const port = Number(process.env.PORT) || 8080;
 const host = process.env.ADDRESS || '0.0.0.0';
-const root_dir = process.env.ROOT || __dirname
+const root_dir = process.env.ROOT || '/home/scorel/Documents'
 
 const server = net.createServer();
 
@@ -15,8 +15,8 @@ server.listen(port, host, () => {
 
 router.startRouter(server);
 
-
-router.static(path.resolve(root_dir))
+router.static('/storage', root_dir)
+router.static('/', path.resolve('static'))
 
 router.get('/files', (req, res) => {
   if (!req.params.path) {
@@ -104,15 +104,29 @@ router.all('/upload', async (req, res) => {
   }
 })
 
-router.delete('/files', (req, res) => {
+router.get('/download', async (req, res) => {
+  try {
+    if (!req.params.path)
+      return router._404(req, res)
 
-  if (!req.params.path)
-    return router._400(req, res)
+    const dest_path = path.join(root_dir, String(req.params.path))
+    res.setHeader('Content-Disposition', `attachment; filename="${decodeURI(dest_path.slice(dest_path.lastIndexOf('/')))}"`)
+    res.file(dest_path, 'application/octet-stream').send(200)
+  } catch (err) {
+    console.error(err)
+    router._500(req, res)
+  }
+
+})
+
+router.delete('/files', (req, res) => {
 
   const dest_path = path.resolve(root_dir, String(req.params.path))
 
-  if (!existsSync(dest_path))
-    return router._404(req, res)
+  if (!req.params.path && !existsSync(dest_path)) {
+    res.json({ msg: 'File not found!', dest_path })
+    res.send(400)
+  }
 
   const stat = lstatSync(dest_path)
   if (stat.isDirectory())

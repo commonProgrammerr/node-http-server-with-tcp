@@ -91,10 +91,10 @@ export interface IParsedResponse {
 export interface IResponse extends IParsedResponse {
   socket: Socket
   setHeader(name: string, value: any): void
-  json(data: any): void
-  text(data: string): void
-  bytes(data: Buffer): void
-  file(path: string): void
+  json(data: any): IResponse
+  text(data: string): IResponse
+  bytes(data: Buffer): IResponse
+  file(path: string, type?: string): IResponse
   send(status?: number): void
 }
 
@@ -111,7 +111,10 @@ export interface IRouter {
   routes: {
     [key: string]: IRoutes
   }
-  staticsBasePath?: string
+  staticsAccess?: {
+    [accessPath: string]: string
+  }
+
   server?: Server
   _404(request: IRequest, response: IResponse): void;
   _400(request: IRequest, response: IResponse): void;
@@ -128,8 +131,8 @@ export interface IRouter {
   head(path: string, cb: RouterCallback): void
 
   requestHandle(request: IRequest): void
-  staticHandle(request: IRequest, response: IResponse): Promise<void>
+  staticHandle(request: IRequest, response: IResponse): Promise<any>
 
-  static(path: string): void
+  static(accessPath: string, dirPath: string): void
   startRouter(server: Server): Server
 }

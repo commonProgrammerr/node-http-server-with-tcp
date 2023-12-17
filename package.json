@@ -8,17 +8,16 @@
     "dev:client": "npx nodemon -w src/client.ts src/lib --exec \"npx ts-node ./src/client.ts\" ",
     "client": "npx  ts-node ./src/client.ts",
     "build": "rimraf ./build && tsc src/server.ts --outDir build && webpack && cp -r src/assets build/assets",
+    "start": "node build/server.bundle.js",
     "start:server": "npm run build && node build/server.bundle.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "colors": "^1.4.0",
     "mime-types": "^2.1.35"
   },
   "devDependencies": {
-    "@types/colors": "^1.2.1",
     "@types/mime-types": "^2.1.4",
     "@types/node": "^20.5.7",
     "concurrently": "^8.2.1",

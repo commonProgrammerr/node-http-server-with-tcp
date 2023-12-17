@@ -16,33 +16,32 @@ function getDirHtml(base: string, childs: string[]) {
 }
 
 function _500(req: IRequest, res: IResponse) {
-  res.file(path.resolve('src/static/500.html'))
+  res.file(path.resolve('static/500.html'))
   res.send(500)
 }
 
 function _404(request: IRequest, response: IResponse) {
-  response.file(path.resolve('src/static/404.html'))
+  response.file(path.resolve('static/404.html'))
   response.send(404)
 }
 
 function _400(req: IRequest, res: IResponse) {
-  res.file(path.resolve('src/static/400.html'))
+  res.file(path.resolve('static/400.html'))
   res.send(400)
 }
 
 export const router: IRouter = {
   routes: {},
-  staticsBasePath: "",
+  staticsAccess: {},
   server: undefined,
 
   _500,
   _404,
   _400,
 
-  static(_path) {
-    const staticsBasePath = path.resolve(_path)
-    this.staticsBasePath = staticsBasePath
-    console.log('Static server on ', staticsBasePath)
+
+  static(accessPath, dirPath) {
+    this.staticsAccess[accessPath] = path.resolve(dirPath)
   },
 
   async requestHandle(request) {
@@ -58,12 +57,11 @@ export const router: IRouter = {
         const p = callback(request, response)
         if (p instanceof Promise)
           await p;
-      } else if (this.staticsBasePath) {
-        await this.staticHandle(request, response)
-      } else {
+      } else if (await this.staticHandle(request, response)) {
         console.log('path not found')
         _404(request, response);
       }
+
     } catch (error) {
       console.error(error)
       _500(request, response)
@@ -72,33 +70,30 @@ export const router: IRouter = {
   },
 
   async staticHandle(request, response) {
-    const filePath = path.join(this.staticsBasePath!, request.path)
-    try {
-      if (!existsSync(filePath)) {
-        console.log('no avaiable file', filePath)
-        return _404(request, response);
+    if (request.method != Methods.get)
+      return true
+
+    const access_path = Object.keys(this.staticsAccess).find(ac => request.path.startsWith(ac))
+    const filePath = access_path && path.join(this.staticsAccess[access_path], request.path.replace(access_path, ''))
+    console.log('search file on', filePath)
+
+    if (filePath && !existsSync(filePath))
+      return true
+
+    console.log('search path', filePath)
+
+    if (lstatSync(filePath).isDirectory()) {
+      const index_path = path.join(filePath, 'index.html')
+      response.setHeader('content-type', 'text/html')
+      if (!existsSync(index_path))
+        response.text(getDirHtml(request.path, readdirSync(filePath)))
+      else {
+        response.file(index_path)
       }
+    } else
+      response.file(filePath)
 
-      console.log('search path', filePath)
-      if (request.method == Methods.get) {
-        if (lstatSync(filePath).isDirectory()) {
-          const index_path = path.join(filePath, 'index.html')
-          response.setHeader('content-type', 'text/html')
-          if (!existsSync(index_path))
-            response.text(getDirHtml(request.path, readdirSync(filePath)))
-          else {
-            response.file(index_path)
-          }
-        } else
-          response.file(filePath)
-
-        response.send(200)
-      } else
-        _400(request, response)
-    } catch (e) {
-      console.error(e)
-      _500(request, response)
-    }
+    response.send(200)
   },
 
   route(method, path, cb) {
