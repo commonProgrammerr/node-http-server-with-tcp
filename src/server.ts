@@ -73,7 +73,7 @@ router.post('/folder', (req, res) => {
 // [0x0D, 0x0A, 0x30, 0x0D, 0x0A, 0x0D, 0x0A]
 // const end_chunk = Buffer.from('DQowDQoNCg==', 'base64')
 
-router.all('/upload', async (req, res) => {
+router.post('/upload', async (req, res) => {
   try {
     if (!req.params.path)
       return router._400(req, res)

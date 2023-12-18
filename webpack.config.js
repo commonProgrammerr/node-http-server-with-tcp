@@ -1,5 +1,6 @@
 const path = require("path");
 const nodeExternals = require("webpack-node-externals");
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   target: "node",
@@ -13,4 +14,12 @@ module.exports = {
   optimization: {
     minimize: false, // enabling this reduces file size and readability
   },
+  context: path.resolve(__dirname),
+  plugins: [
+    new CopyWebpackPlugin({
+      patterns: [
+        { from: 'static' }
+      ]
+    })
+  ]
 };
