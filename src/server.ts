@@ -11,6 +11,7 @@ const server = net.createServer();
 
 server.listen(port, host, () => {
   console.log('Server is running on port ' + port + '.');
+  console.log("Access on:", `http://${host}:${port}`);
 });
 
 router.startRouter(server);
@@ -73,7 +74,7 @@ router.post('/folder', (req, res) => {
 // [0x0D, 0x0A, 0x30, 0x0D, 0x0A, 0x0D, 0x0A]
 // const end_chunk = Buffer.from('DQowDQoNCg==', 'base64')
 
-router.post('/upload', async (req, res) => {
+router.all('/upload', async (req, res) => {
   try {
     if (!req.params.path)
       return router._400(req, res)

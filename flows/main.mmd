@@ -1,0 +1,16 @@
+graph TD
+  A(Início) --> |Configuração do Servidor| C(Criação do Servidor TCP)
+  C --> |Configuração de Rotas| D(Inicialização do Roteador)
+  D --> G(Espera por Conexões)
+  G --> H(Recebimento de Requisições)
+  H --> |Parsing da Requisição| K(Roteamento da Requisição)
+  K --> B{É valida?}
+  B --> |Sim|L(Execução da Lógica do Manipulador)
+  B --> |Não|F(Indentificar erro)
+  L --> |Geração da Resposta| N(Envio da Resposta)
+  F --> |Gerar mensagem de error|N
+  H --> G
+  
+  style A fill:#67C23A
+  style B fill:#C7C200
+  style G fill:#409EFF

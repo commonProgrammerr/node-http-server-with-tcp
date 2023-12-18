@@ -1,0 +1,17 @@
+graph TD;
+  A[Cliente] -->|Envia Requisição HTTP| B(Servidor);
+  B -->|Processa Requisição| C{Lógica da Aplicação};
+  C -->|Gera Resposta| B;
+  B -->|Envia Resposta HTTP| A;
+  C -->|Acesso aos Arquivos| D(Arquivos);
+  
+  subgraph Camada de Aplicação
+    C -->|Execução de Código| F(Código da Aplicação);
+    F -->|Manipulação de Dados| D;
+  end
+
+  subgraph Camada de Transporte
+    A -->|Recebimento de Pacotes| G;
+    B -->|Camada de Transporte| G{HTTP};
+    G -->|Envio de Pacotes| A;
+  end
