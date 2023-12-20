@@ -91,12 +91,16 @@ router.all('/upload', async (req, res) => {
     else
       req.socket.addListener('chunk', (data: Buffer) => {
         // if (data.toString().endsWith(end_chunk.toString())) {
-        if (data.byteLength < 64 * 1024) {
-          file.write(data)
-          res.send(201)
+        // if (data.byteLength < 64 * 1024) {
+        file.write(data)
+        const { socket } = res
+        if (socket.bytesRead >= Number(req.headers['content-length'])) {
+          console.log('Upload done!')
+
+          if (socket.writable && !socket.closed)
+            res.send(201)
         }
-        else
-          file.write(data)
+
       })
 
   } catch (err) {
