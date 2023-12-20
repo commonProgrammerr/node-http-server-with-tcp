@@ -21,7 +21,7 @@ export function parseRequest(payload: Buffer): IParserdRequest | undefined {
       const request_line = top_header.split(' ');
       const method = request_line[0];
       const url = request_line[1].split('?');
-      const path = url[0];
+      const path = decodeURI(url[0]);
 
       const raw_params = url[1] ? new URLSearchParams(url[1]) : undefined;
       let headers: IHeaders = {};
@@ -55,7 +55,8 @@ export function parseRequest(payload: Buffer): IParserdRequest | undefined {
         body,
       };
     } else {
-      throw new Error('Invalid HTTP request format.');
+      // throw new Error('Invalid HTTP request format.');
+      return undefined
     }
   } catch (error) {
     console.error('Error parsing request:', error);

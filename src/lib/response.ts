@@ -32,7 +32,7 @@ export function _response(socket: Socket): IResponse {
      */
     bytes(data: Buffer) {
       this.buffer = data;
-      this.setHeader('content-length', this.buffer.length);
+      this.setHeader('content-length', Buffer.byteLength(this.buffer));
       return this;
     },
 
@@ -44,7 +44,7 @@ export function _response(socket: Socket): IResponse {
     text(data: string) {
       this.body = data;
       this.setHeader('content-type', 'text/plain');
-      this.setHeader('content-length', this.body.length);
+      this.setHeader('content-length', Buffer.byteLength(this.body));
       return this;
     },
 

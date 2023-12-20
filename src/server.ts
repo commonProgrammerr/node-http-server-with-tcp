@@ -124,7 +124,7 @@ router.delete('/files', (req, res) => {
 
   const dest_path = path.resolve(root_dir, String(req.params.path))
 
-  if (!req.params.path && !existsSync(dest_path)) {
+  if (!req.params.path || !existsSync(dest_path)) {
     res.json({ msg: 'File not found!', dest_path })
     res.send(400)
   }
@@ -136,7 +136,6 @@ router.delete('/files', (req, res) => {
     rmSync(dest_path)
 
   const sucess = !existsSync(dest_path)
-  res.json({ sucess })
   res.send(sucess ? 204 : 500)
 
 })

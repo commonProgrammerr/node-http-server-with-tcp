@@ -15,7 +15,7 @@ function getDirHtml(base: string, childs: string[]): string {
   return `<!DOCTYPE html><html><head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>listing directory /</title></head><body class="directory vsc-initialized">
+<title>listing directory ${base} </title></head><body class="directory vsc-initialized"><h1>${base}</h1>
 <div id="wrapper"><ul id="files" class="view-tiles">${childs.reduce((p, c) => p + `<li><a href="${path.join(base, c)}" title="${c}"><span class="name">${c}</span></a></li>`, '')}
 </ul></div></body></html>`;
 }
@@ -120,11 +120,11 @@ export const router: IRouter = {
 
     if (lstatSync(filePath).isDirectory()) {
       const indexPath = path.join(filePath, 'index.html');
-      response.setHeader('content-type', 'text/html');
-      if (!existsSync(indexPath))
-        response.text(getDirHtml(request.path, readdirSync(filePath)));
+      if (existsSync(indexPath))
+        response.file(indexPath, 'text/html');
       else {
-        response.file(indexPath);
+        response.text(getDirHtml(request.path, readdirSync(filePath)));
+        response.setHeader('content-type', 'text/html');
       }
     } else
       response.file(filePath);
